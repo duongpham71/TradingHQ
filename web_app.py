@@ -481,3 +481,17 @@ if __name__ == "__main__":
         debug=False,
         threaded=True,
     )
+
+@app.route("/api/scan-log")
+def api_scan_log():
+    if not SCAN_LOG_FILE.exists():
+        return jsonify({
+            "status": "error",
+            "message": "No scan log exists yet.",
+        }), 404
+
+    return send_file(
+        SCAN_LOG_FILE,
+        mimetype="text/plain",
+        max_age=0,
+    )

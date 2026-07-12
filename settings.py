@@ -5,6 +5,22 @@ User-adjustable Trading HQ scanner settings.
 
 from __future__ import annotations
 
+# Dynamic market scan
+DYNAMIC_MARKET_SCAN = True
+
+TOP_RESULTS_LIMIT = 20
+
+# Number of snapshot candidates that receive full indicator analysis
+MARKET_PREFILTER_LIMIT = 60
+
+# Broad-market prefilters
+MIN_DAILY_VOLUME = 500_000
+MIN_SESSION_GAIN_PERCENT = 0.0
+MIN_INTRADAY_RANGE_PERCENT = 2.0
+
+# Exclude unusual ticker formats such as warrants and preferred shares
+MAX_TICKER_LENGTH = 5
+
 
 # ============================================================
 # MARKET DATA

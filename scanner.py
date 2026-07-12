@@ -129,12 +129,34 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def resolve_symbols(args: argparse.Namespace) -> list[str]:
-    """Choose explicit symbols, text-file symbols, or a named watchlist."""
+def resolve_symbols(
+    args: argparse.Namespace,
+    client: PolygonClient,
+) -> list[str]:
+    """
+    Use explicit command-line symbols first.
+
+    Otherwise dynamically pull momentum candidates from Massive.
+    Fall back to daily_list.txt only when dynamic scanning is disabled.
+    """
     if args.symbols:
         return normalize_symbols(args.symbols)
 
-    file_symbols = load_symbols_from_text(args.robinhood_file)
+    if config.DYNAMIC_MARKET_SCAN:
+        print("Loading dynamic market universe from Massive...")
+
+        symbols = client.fetch_market_candidates()
+
+        print(
+            f"Massive prefilter selected "
+            f"{len(symbols)} candidates."
+        )
+
+        return symbols
+
+    file_symbols = load_symbols_from_text(
+        args.robinhood_file
+    )
 
     if file_symbols:
         return file_symbols
@@ -143,6 +165,91 @@ def resolve_symbols(args: argparse.Namespace) -> list[str]:
 
 
 def main() -> int:
+    """Run the Trading HQ scanner."""
+
+    try:
+        validate_settings()
+    except ValueError as exc:
+        print(
+            f"SETTINGS ERROR: {exc}",
+            file=sys.stderr,
+        )
+        return 1
+
+    args = parse_args()
+
+    try:
+        client = PolygonClient()
+    except MarketDataError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
+
+    try:
+        symbols = resolve_symbols(args, client)
+    except MarketDataError as exc:
+        print(
+            f"UNIVERSE ERROR: {exc}",
+            file=sys.stderr,
+        )
+        return 1
+
+    if not symbols:
+        print(
+            "ERROR: Dynamic scan found no candidates.",
+            file=sys.stderr,
+        )
+        return 1
+
+    print("Trading HQ dynamic market scanner")
+    print(f"Endpoint: {client.base_url}")
+    print(f"Candidates: {len(symbols)}\n")
+
+    rows: list[dict[str, Any]] = []
+
+    for ticker in symbols:
+        try:
+            rows.append(
+                analyze_ticker(ticker, client)
+            )
+            print(f"{ticker}: completed")
+        except (
+            MarketDataError,
+            ValueError,
+            KeyError,
+            TypeError,
+        ) as exc:
+            print(
+                f"{ticker}: ERROR - {exc}",
+                file=sys.stderr,
+            )
+
+    report = build_report(rows)
+
+    # Keep only the best 20 after full indicator analysis.
+    report = report.head(
+        config.TOP_RESULTS_LIMIT
+    ).copy()
+
+    # Rebuild rank after truncation.
+    if not report.empty:
+        report["rank"] = range(
+            1,
+            len(report) + 1,
+        )
+
+    print_report(report)
+
+    if report.empty:
+        return 2
+
+    csv_path = save_csv(report)
+    html_path = create_dashboard(report)
+
+    print(f"\nSaved CSV: {csv_path}")
+    print(f"Saved dashboard: {html_path}")
+
+    return 0
+
     """Run the Trading HQ scanner."""
     try:
         validate_settings()

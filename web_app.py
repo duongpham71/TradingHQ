@@ -470,18 +470,6 @@ if __name__ == "__main__":
         threaded=True,
     )
 
-if __name__ == "__main__":
-    import os
-
-    port = int(os.getenv("PORT", "8000"))
-
-    app.run(
-        host="0.0.0.0",
-        port=port,
-        debug=False,
-        threaded=True,
-    )
-
 @app.route("/api/scan-log")
 def api_scan_log():
     if not SCAN_LOG_FILE.exists():
@@ -495,3 +483,16 @@ def api_scan_log():
         mimetype="text/plain",
         max_age=0,
     )
+
+if __name__ == "__main__":
+    import os
+
+    port = int(os.getenv("PORT", "8000"))
+
+    app.run(
+        host="0.0.0.0",
+        port=port,
+        debug=False,
+        threaded=True,
+    )
+

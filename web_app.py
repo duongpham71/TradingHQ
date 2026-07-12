@@ -5,6 +5,7 @@ Trading HQ local dashboard, scanner control, and JSON API.
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 import threading

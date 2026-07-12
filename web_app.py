@@ -10,6 +10,7 @@ import sys
 import threading
 from pathlib import Path
 import config
+import traceback
 
 import pandas as pd
 from flask import Flask, jsonify, redirect, render_template_string, send_file, url_for
@@ -348,7 +349,32 @@ def api_run_scan():
                 "message": f"Could not start scanner: {exc}",
             }
         ), 500
+    
+    except Exception as exc:
+        error_trace = traceback.format_exc()
 
+        OUTPUT_DIR.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        SCAN_LOG_FILE.write_text(
+            "UNHANDLED WEB APP ERROR\n"
+            "=======================\n"
+            f"{error_trace}\n",
+            encoding="utf-8",
+        )
+
+        scan_status["message"] = "Unhandled scan error."
+
+        return jsonify(
+            {
+                "status": "error",
+                "message": str(exc),
+                "traceback": error_trace,
+            }
+        ), 500
+    
     finally:
         scan_status["running"] = False
         scan_lock.release()

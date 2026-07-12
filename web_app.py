@@ -254,6 +254,11 @@ def api_run_scan():
             parents=True,
             exist_ok=True,
         )
+        scanner_environment = os.environ.copy()
+
+        scanner_environment["TRADINGHQ_DATA_DIR"] = str(
+            OUTPUT_DIR
+        )
 
         completed = subprocess.run(
             [
@@ -261,13 +266,18 @@ def api_run_scan():
                 str(SCANNER_FILE),
             ],
             cwd=str(PROJECT_DIR),
+            env=scanner_environment,
             capture_output=True,
             text=True,
-            timeout=180,
+            timeout=900,
             check=False,
         )
 
         log_content = (
+            f"OUTPUT_DIR: {OUTPUT_DIR}\n"
+            f"RESULTS_FILE: {RESULTS_FILE}\n"
+            f"RESULTS_EXISTS: {RESULTS_FILE.exists()}\n"
+            f"RETURN_CODE: {completed.returncode}\n\n"
             "STDOUT\n"
             "======\n"
             f"{completed.stdout}\n\n"

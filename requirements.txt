@@ -1,0 +1,7 @@
+Flask
+gunicorn
+pandas
+numpy
+requests
+polygon-api-client
+ta

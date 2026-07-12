@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+output/
+.env
+scanner_log.txt
+web_scan_log.txt
+previous_results.csv

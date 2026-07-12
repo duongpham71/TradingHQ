@@ -2,7 +2,6 @@
 polygon_client.py
 Trading HQ - Polygon/Massive API Client
 """
-
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
@@ -24,15 +23,22 @@ class MarketDataError(RuntimeError):
 class PolygonClient:
     """Simple Polygon/Massive REST client."""
 
-    def __init__(self):
-        self.api_key = config.API_KEY
-        self.base_url = config.BASE_URL
-        self.timeout = config.REQUEST_TIMEOUT
+    def __init__(
+        self,
+        api_key: str | None = None,
+        base_url: str | None = None,
+        timeout: int | None = None,
+    ) -> None:
+        self.api_key = api_key or config.API_KEY
+        self.base_url = (base_url or config.BASE_URL).rstrip("/")
+        self.timeout = timeout or config.REQUEST_TIMEOUT
 
         if not self.api_key:
             raise MarketDataError(
-                "POLYGON_API_KEY was not found."
+                f"{config.API_KEY_ENV} is not set."
             )
+
+        self.session = requests.Session()
 
     def fetch_bars(self, ticker: str) -> pd.DataFrame:
         """

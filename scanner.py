@@ -11,7 +11,6 @@ from typing import Any
 import pandas as pd
 
 import config
-from alerts import run_alerts
 from dashboard import create_dashboard
 from indicators import (
     add_indicators,

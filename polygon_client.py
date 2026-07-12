@@ -195,22 +195,31 @@ class PolygonClient:
 
             day = item.get("day") or {}
             previous_day = item.get("prevDay") or {}
+            last_trade = item.get("lastTrade") or {}
+
+            current_day_valid = (
+                float(day.get("c") or 0) > 0
+                and float(day.get("v") or 0) > 0
+            )
+
+            # Use current-session data when populated.
+            # Fall back to the previous completed session on weekends
+            # and before the new snapshot has repopulated.
+            source = day if current_day_valid else previous_day
 
             price = float(
-                day.get("c")
-                or item.get("lastTrade", {}).get("p")
+                source.get("c")
+                or last_trade.get("p")
                 or 0
             )
 
-            open_price = float(day.get("o") or 0)
-            high = float(day.get("h") or 0)
-            low = float(day.get("l") or 0)
-            volume = float(day.get("v") or 0)
-            vwap = float(day.get("vw") or 0)
+            open_price = float(source.get("o") or 0)
+            high = float(source.get("h") or 0)
+            low = float(source.get("l") or 0)
+            volume = float(source.get("v") or 0)
+            vwap = float(source.get("vw") or 0)
 
-            previous_close = float(
-                previous_day.get("c") or 0
-            )
+            previous_close = float(previous_day.get("c") or 0)
 
             if not ticker or not ticker.isalpha():
                 continue
@@ -230,11 +239,19 @@ class PolygonClient:
             if vwap > 0 and price <= vwap:
                 continue
 
-            session_gain = (
-                ((price / previous_close) - 1.0) * 100.0
-                if previous_close > 0
-                else ((price / open_price) - 1.0) * 100.0
-            )
+            # When using the previous completed session, measure its
+            # open-to-close momentum. During a live session, compare
+            # against the previous close.
+            if current_day_valid and previous_close > 0:
+                session_gain = (
+                    (price / previous_close) - 1.0
+                ) * 100.0
+            elif open_price > 0:
+                session_gain = (
+                    (price / open_price) - 1.0
+                ) * 100.0
+            else:
+                session_gain = 0.0
 
             intraday_range = (
                 ((high - low) / low) * 100.0
@@ -268,6 +285,11 @@ class PolygonClient:
                 }
             )
 
+        print(
+            f"Snapshot rows: {len(snapshots)} | "
+            f"Candidates passing prefilter: {len(candidates)}"
+        )
+        
         candidates.sort(
             key=lambda row: (
                 float(row["prefilter_score"]),

@@ -9,6 +9,7 @@ import subprocess
 import sys
 import threading
 from pathlib import Path
+import config
 
 import pandas as pd
 from flask import Flask, jsonify, redirect, render_template_string, send_file, url_for
@@ -17,12 +18,18 @@ from flask import Flask, jsonify, redirect, render_template_string, send_file, u
 app = Flask(__name__)
 
 PROJECT_DIR = Path(__file__).resolve().parent
-OUTPUT_DIR = PROJECT_DIR / "output"
+
+OUTPUT_DIR = config.OUTPUT_DIR
+DASHBOARD_FILE = config.HTML_OUTPUT
+RESULTS_FILE = config.CSV_OUTPUT
+SCAN_LOG_FILE = OUTPUT_DIR / "web_scan_log.txt"
 
 SCANNER_FILE = PROJECT_DIR / "scanner.py"
-DASHBOARD_FILE = OUTPUT_DIR / "dashboard.html"
-RESULTS_FILE = OUTPUT_DIR / "scanner_results.csv"
-SCAN_LOG_FILE = OUTPUT_DIR / "web_scan_log.txt"
+
+OUTPUT_DIR.mkdir(
+    parents=True,
+    exist_ok=True,
+)
 
 scan_lock = threading.Lock()
 scan_status = {
@@ -426,17 +433,17 @@ def api_top20():
 
 @app.route("/api/health")
 def api_health():
-    """Return application and scanner status."""
-    return jsonify(
-        {
-            "status": "ok",
-            "dashboard_exists": DASHBOARD_FILE.exists(),
-            "results_exists": RESULTS_FILE.exists(),
-            "scanner_exists": SCANNER_FILE.exists(),
-            "scan_running": scan_status["running"],
-            "scan_message": scan_status["message"],
-        }
-    )
+    return jsonify({
+        "status": "ok",
+        "output_dir": str(OUTPUT_DIR),
+        "results_file": str(RESULTS_FILE),
+        "dashboard_file": str(DASHBOARD_FILE),
+        "dashboard_exists": DASHBOARD_FILE.exists(),
+        "results_exists": RESULTS_FILE.exists(),
+        "scanner_exists": SCANNER_FILE.exists(),
+        "scan_running": scan_status["running"],
+        "scan_message": scan_status["message"],
+    })
 
 
 def read_results() -> pd.DataFrame | None:
